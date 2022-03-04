@@ -1,0 +1,183 @@
+
+########################  Project Summary ######################################
+######   Nginx application deployment on Kubernetes MiniKube Cluster.      #####
+######   application : Nginx                                               #####
+######   service : NodePort (Having public interface)                      #####
+######   Pod : Hosting Nginx application.                                  #####
+######   Note : No ingress is require for routing traffic to ports.        #####
+################################################################################
+
+sagar@workstation:~$ kubectl get all
+NAME                            READY   STATUS    RESTARTS       AGE
+pod/postgres-5b4c76c777-vr5t2   1/1     Running   1              5d22h
+pod/webapp-c7cd94d8-6kc49       1/1     Running   4 (115s ago)   5d22h
+
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+service/kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP          19d
+service/postgres     ClusterIP   10.111.89.207   <none>        5432/TCP         5d22h
+service/webapp       NodePort    10.108.62.154   <none>        8080:31317/TCP   5d21h
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/postgres   1/1     1            1           5d22h
+deployment.apps/webapp     1/1     1            1           5d22h
+
+NAME                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/postgres-5b4c76c777   1         1         1       5d22h
+replicaset.apps/webapp-c7cd94d8       1         1         1       5d22h
+
+-------------------------------
+-
+sagar@workstation:~$ kubectl get pods
+NAME                        READY   STATUS    RESTARTS        AGE
+postgres-5b4c76c777-vr5t2   1/1     Running   1               5d22h
+webapp-c7cd94d8-6kc49       1/1     Running   4 (2m31s ago)   5d22h
+
+-----------------
+sagar@workstation:~$ kubectl get deployment 
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+postgres   1/1     1            1           5d22h
+webapp     1/1     1            1           5d22h
+
+-------------------
+sagar@workstation:~$ kubectl delete deployment postgres
+deployment.apps "postgres" deleted
+sagar@workstation:~$ kubectl delete deployment webapp
+deployment.apps "webapp" deleted
+sagar@workstation:~$ kubectl get deployment 
+No resources found in default namespace.
+sagar@workstation:~$ kubectl get pods 
+No resources found in default namespace.
+sagar@workstation:~$ kubectl get screts
+error: the server doesn't have a resource type "screts"
+sagar@workstation:~$ kubectl get secret
+NAME                  TYPE                                  DATA   AGE
+default-token-k64fp   kubernetes.io/service-account-token   3      19d
+
+sagar@workstation:~$ kubectl get pvc
+No resources found in default namespace.
+
+sagar@workstation:~$ kubectl get pvc-claim
+error: the server doesn't have a resource type "pvc-claim"
+
+---------------------------------
+
+sagar@workstation:~$ kubectl create deployment nginx --image=nginx
+deployment.apps/nginx created
+sagar@workstation:~$ kubectl get deployment 
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+nginx   0/1     1            0           6s
+-------------------------
+
+
+sagar@workstation:~$ kubectl describe deployment nginx 
+Name:                   nginx
+Namespace:              default
+CreationTimestamp:      Thu, 03 Mar 2022 18:59:27 +0530
+Labels:                 app=nginx
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=nginx
+Replicas:               1 desired | 1 updated | 1 total | 0 available | 1 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=nginx
+  Containers:
+   nginx:
+    Image:        nginx
+    Port:         <none>
+    Host Port:    <none>
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      False   MinimumReplicasUnavailable
+  Progressing    True    ReplicaSetUpdated
+OldReplicaSets:  <none>
+NewReplicaSet:   nginx-85b98978db (1/1 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  29s   deployment-controller  Scaled up replica set nginx-85b98978db to 1
+sagar@workstation:~$ kubectl get deployment 
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+nginx   1/1     1            1           7m19s
+
+--------------------------------------
+sagar@workstation:~$ kubectl create service nodeport nginx  --tcp=80:80
+service/nginx created
+sagar@workstation:~$ kubectl get service 
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP          19d
+nginx        NodePort    10.105.225.203   <none>        80:30015/TCP     6s
+postgres     ClusterIP   10.111.89.207    <none>        5432/TCP         5d22h
+webapp       NodePort    10.108.62.154    <none>        8080:31317/TCP   5d22h
+
+-----------------------------------------
+sagar@workstation:~$ kubectl delete service postgres
+service "postgres" deleted
+sagar@workstation:~$ kubectl delete service postgres webapp
+service "webapp" deleted
+Error from server (NotFound): services "postgres" not found
+sagar@workstation:~$ kubectl get service 
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP        19d
+nginx        NodePort    10.105.225.203   <none>        80:30015/TCP   66s
+--------------------------------------------
+
+sagar@workstation:~$ kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-85b98978db-5dx2b   1/1     Running   0          15m
+sagar@workstation:~$ kubectl get svc
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP        19d
+nginx        NodePort    10.105.225.203   <none>        80:30015/TCP   5m51s
+------------------------------------------
+
+sagar@workstation:~/sagar$ kubectl api-resources | grep deployment
+deployments        deploy       apps/v1      true         Deployment
+
+sagar@workstation:~/agar$ kubectl get svc
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP        19d
+nginx        NodePort    10.105.225.203   <none>        80:30015/TCP   33m
+
+
+sagar@workstation:~/sagar$ minikube service list --namespace default 
+|-----------|------------|--------------|-----------------------------|
+| NAMESPACE |    NAME    | TARGET PORT  |             URL             |
+|-----------|------------|--------------|-----------------------------|
+| default   | kubernetes | No node port |
+| default   | nginx      | 80-80/80     | http://192.168.59.100:30015 |
+|-----------|------------|--------------|-----------------------------|
+
+note : Nginx URL from browser.
+
+sagar@workstation:~/sagar$ curl 192.168.59.100:30015
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>     ###############  all working fine.
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+####################   Implementation completed #############################
